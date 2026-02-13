@@ -23,6 +23,7 @@ void app_main(void)
     float brightness = 0.0f;
 
     configure_joystick();
+    configure_button_cbs(sample_single_clk_cb, sample_double_clk_cb, sample_button_pressed_cb, sample_button_long_pressed_cb);
 
     while(1) {
         read_joystick(&joy_x_val, &joy_y_val, &joy_sw_pressed);

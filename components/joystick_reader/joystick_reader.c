@@ -5,6 +5,8 @@
 #include "esp_err.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "button_gpio.h"
+#include "iot_button.h"
 
 static const char* TAG = "JOYSTICK_READER";
 
@@ -12,6 +14,8 @@ static adc_oneshot_unit_handle_t s_adc;
 
 static adc_channel_t s_chan_x;
 static adc_channel_t s_chan_y;
+
+static button_handle_t s_btn;
 
 static void init_adc() {
     adc_oneshot_unit_init_cfg_t init_cfg = {
@@ -41,11 +45,34 @@ static void configure_adc_pin(int gpio, adc_channel_t* out_channel) {
     *out_channel = channel;
 }
 
+static void configure_button(void) {
+    button_config_t btn_cfg = {0};
+    button_gpio_config_t btn_gpio_cfg = {
+        .gpio_num = JOYSTICK_SW_GPIO,
+        .active_level = 0,
+    };
+
+    ESP_ERROR_CHECK(iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &s_btn));    
+}
+
+void configure_button_cbs(
+    void(*single_clk_cb)(void *arg,void *usr_data),
+    void(*double_clk_cb)(void *arg,void *usr_data),
+    void(*press_cb)(void *arg,void *usr_data),
+    void(*long_press_cb)(void *arg,void *usr_data))
+{
+    iot_button_register_cb(s_btn, BUTTON_SINGLE_CLICK, NULL, single_clk_cb, NULL);
+    iot_button_register_cb(s_btn, BUTTON_DOUBLE_CLICK, NULL, double_clk_cb, NULL);
+    iot_button_register_cb(s_btn, BUTTON_PRESS_DOWN, NULL, press_cb, NULL);
+    iot_button_register_cb(s_btn, BUTTON_LONG_PRESS_START, NULL, long_press_cb, NULL);
+}
+
 void configure_joystick(void) {
     init_adc();
 
     configure_adc_pin(JOYSTICK_X_GPIO, &s_chan_x);
     configure_adc_pin(JOYSTICK_Y_GPIO, &s_chan_y);
+    configure_button();
 
     gpio_config_t sw_cfg = {
         .pin_bit_mask = 1ULL << JOYSTICK_SW_GPIO,
@@ -90,4 +117,20 @@ float get_bts_from_joy_y(int y) {
         return 0.0f;
     }
     return (float)(y) / 4095.0f;
+}
+
+void sample_single_clk_cb(void *arg,void *usr_data) {
+    ESP_LOGI(TAG, "single click");
+}
+
+void sample_double_clk_cb(void *arg,void *usr_data) {
+    ESP_LOGI(TAG, "double click");
+}
+
+void sample_button_pressed_cb(void *arg,void *usr_data) {
+    ESP_LOGI(TAG, "button pressed");
+}
+
+void sample_button_long_pressed_cb(void *arg,void *usr_data) {
+    ESP_LOGI(TAG, "button long pressed");
 }
