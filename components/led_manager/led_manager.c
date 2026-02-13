@@ -4,7 +4,7 @@
 
 #include "led_manager.h"
 
-static const char* TAG = "Main";
+static const char* TAG = "LED_MANAGER";
 
 led_strip_handle_t configure_led(void) {
     led_strip_handle_t strip = NULL;
