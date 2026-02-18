@@ -3,4 +3,5 @@ idf_component_register(SRCS "main.c"
                     REQUIRES 
                         "led_manager"
                         "driver"
-                        "joystick_reader")
+                        "joystick_reader"
+                        "wifi_manager")

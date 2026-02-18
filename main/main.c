@@ -5,37 +5,15 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
+#include "stdbool.h"
+
 #include "led_manager.h"
 #include "joystick_reader.h"
-#include "stdbool.h"
+#include "wifi_manager.h"
 
 static const char* TAG = "MAIN";
 
 void app_main(void)
 {
-    led_strip_handle_t strip = configure_led();
-    bool led_on = false;
-
-    int joy_x_val = 0;
-    int joy_y_val = 0;
-    bool joy_sw_pressed = false;
-
-    float brightness = 0.0f;
-
-    configure_joystick();
-    configure_button_cbs(sample_single_clk_cb, sample_double_clk_cb, sample_button_pressed_cb, sample_button_long_pressed_cb);
-
-    while(1) {
-        read_joystick(&joy_x_val, &joy_y_val, &joy_sw_pressed);
-
-        brightness = get_bts_from_joy_y(joy_y_val);
-
-        ESP_ERROR_CHECK(led_strip_set_pixel(strip, 0,
-            RED_FROM_JOY(joy_x_val, brightness),
-            GREEN_FROM_JOY(joy_x_val, brightness),
-            BLUE_FROM_JOY(joy_x_val, brightness)));
-        ESP_ERROR_CHECK(led_strip_refresh(strip));
-            
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
+    start_wifi_sta();
 }
