@@ -6,4 +6,5 @@ idf_component_register(SRCS "main.c"
                         "joystick_reader"
                         "wifi_manager"
                         "main_helper"
-                        "snake_game")
+                        "snake_game"
+                        "uart_manager")
