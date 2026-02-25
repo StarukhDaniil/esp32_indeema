@@ -10,10 +10,38 @@
 #include "led_manager.h"
 #include "joystick_reader.h"
 #include "wifi_manager.h"
+#include "main_helper.h"
+#include "snake_game.h"
 
 static const char* TAG = "MAIN";
 
+static wifi_manager_handle_t wm;
+
+static EventGroupHandle_t joy_eg;
+static EventGroupHandle_t wifi_led_eg;
+
+static joystick_reader_handle_t joy_reader;
+static led_manager_handle_t led_manager;
+static snake_handle_t snake;
+
 void app_main(void)
 {
-    start_wifi_sta();
+    start_nvs_flash();
+
+    joy_eg = xEventGroupCreate();
+    wifi_led_eg= xEventGroupCreate();
+
+    configure_wifi(&wm, wifi_led_eg, joy_eg);
+    configure_joystick(&joy_reader, joy_eg);
+    // configure_led(&led_manager, wifi_led_eg);
+    init_snake(&snake, joy_eg);
+
+    mh_configure_joy_cbs(&joy_reader);
+    // mh_configure_wifi_led_cbs(&led_manager);
+    // mh_configure_wifi_cbs(&wm);
+
+    // start_wifi_sta(&wm);
+    start_joy_event_loop(&joy_reader);
+    // start_led_event_loop(&led_manager);
+    snake_start_game(&snake);
 }

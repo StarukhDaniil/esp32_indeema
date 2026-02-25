@@ -4,4 +4,7 @@ idf_component_register(SRCS "wifi_manager.c"
                         "esp_wifi"
                         "esp_event"
                         "nvs_flash"
-                        "esp_netif")
+                        "esp_netif"
+                        "containers"
+                        "joystick_reader"
+                        "led_manager")
