@@ -14,6 +14,7 @@
 #include "snake_game.h"
 #include "uart_manager.h"
 #include "wifi_snake_controller.h"
+#include "sensor_reader.h"
 
 // static const char* TAG = "MAIN";
 
@@ -25,6 +26,7 @@ static joystick_reader_t joy_reader;
 static led_manager_t led_manager;
 static snake_t snake;
 static ws_manager_t wifi_snake_manager;
+static sensor_reader_t sr;
 
 static uart_manager_t um;
 
@@ -41,6 +43,7 @@ void app_main(void)
     init_snake(&snake, joy_eg);
     init_um(&um);
     init_wifi_snake_controller(&wifi_snake_manager, joy_eg);
+    init_sensor_reader(&sr, joy_eg);
 
     mh_configure_joy_cbs(&joy_reader);
     mh_configure_wifi_led_cbs(&led_manager);
@@ -52,4 +55,5 @@ void app_main(void)
     start_uart(&um);
     start_controlling_pause(&wifi_snake_manager);
     snake_start_game(&snake);
+    sensor_reader_start_event_loop(&sr);
 }

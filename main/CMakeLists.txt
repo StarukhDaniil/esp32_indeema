@@ -8,5 +8,5 @@ idf_component_register(SRCS "main.c"
                         "main_helper"
                         "snake_game"
                         "uart_manager"
-                        "i2c_manager"
+                        "sensor_reader"
                         "wifi_snake_controller")
