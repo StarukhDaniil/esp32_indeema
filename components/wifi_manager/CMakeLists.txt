@@ -7,4 +7,5 @@ idf_component_register(SRCS "wifi_manager.c"
                         "esp_netif"
                         "containers"
                         "joystick_reader"
-                        "led_manager")
+                        "led_manager"
+                        "snake_game")

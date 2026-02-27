@@ -11,7 +11,7 @@
 
 static const char* TAG = "JOYSTICK_READER";
 
-static void init_adc(joystick_reader_handle_t* joy_reader) {
+static void init_adc(joystick_reader_handle_t joy_reader) {
     adc_oneshot_unit_init_cfg_t init_cfg = {
         .unit_id = ADC_UNIT_1,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
@@ -19,7 +19,7 @@ static void init_adc(joystick_reader_handle_t* joy_reader) {
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_cfg, &(joy_reader->adc)));
 }
 
-static void configure_adc_pin(joystick_reader_handle_t* joy_reader, int gpio, adc_channel_t* out_channel) {
+static void configure_adc_pin(joystick_reader_handle_t joy_reader, int gpio, adc_channel_t* out_channel) {
     adc_unit_t unit = ADC_UNIT_1;
     adc_channel_t channel = ADC_CHANNEL_0;
 
@@ -39,7 +39,7 @@ static void configure_adc_pin(joystick_reader_handle_t* joy_reader, int gpio, ad
     *out_channel = channel;
 }
 
-static void configure_button(joystick_reader_handle_t* joy_reader) {
+static void configure_button(joystick_reader_handle_t joy_reader) {
     button_config_t btn_cfg = {0};
     button_gpio_config_t btn_gpio_cfg = {
         .gpio_num = JOYSTICK_SW_GPIO,
@@ -50,7 +50,7 @@ static void configure_button(joystick_reader_handle_t* joy_reader) {
 }
 
 void configure_button_cbs(
-    joystick_reader_handle_t* joy_reader,
+    joystick_reader_handle_t joy_reader,
     void(*single_clk_cb)(void *arg,void *usr_data),
     void(*double_clk_cb)(void *arg,void *usr_data),
     void(*press_cb)(void *arg,void *usr_data),
@@ -62,27 +62,27 @@ void configure_button_cbs(
     iot_button_register_cb(joy_reader->btn, BUTTON_LONG_PRESS_START, NULL, long_press_cb, NULL);
 }
 
-void configure_joy_x0_cbs(joystick_reader_handle_t* joy_reader, void(*x0_cb)(void*)) {
+void configure_joy_x0_cbs(joystick_reader_handle_t joy_reader, void(*x0_cb)(void*)) {
     joy_reader->x0_cb = x0_cb;
 }
 
-void configure_joy_x4095_cbs(joystick_reader_handle_t* joy_reader, void(*x4095_cb)(void*)) {
+void configure_joy_x4095_cbs(joystick_reader_handle_t joy_reader, void(*x4095_cb)(void*)) {
     joy_reader->x4095_cb = x4095_cb;
 }
 
-void configure_joy_y0_cbs(joystick_reader_handle_t* joy_reader, void(*y0_cb)(void*)) {
+void configure_joy_y0_cbs(joystick_reader_handle_t joy_reader, void(*y0_cb)(void*)) {
     joy_reader->y0_cb = y0_cb;
 }
 
-void configure_joy_y4095_cbs(joystick_reader_handle_t* joy_reader, void(*y4095_cb)(void*)) {
+void configure_joy_y4095_cbs(joystick_reader_handle_t joy_reader, void(*y4095_cb)(void*)) {
     joy_reader->y4095_cb = y4095_cb;
 }
 
-void configure_joy_sw_pressed_cbs(joystick_reader_handle_t* joy_reader, void(*sw_pressed_cb)(void*)) {
+void configure_joy_sw_pressed_cbs(joystick_reader_handle_t joy_reader, void(*sw_pressed_cb)(void*)) {
     joy_reader->sw_pressed = sw_pressed_cb;
 }
 
-void configure_joystick(joystick_reader_handle_t* joy_reader, EventGroupHandle_t eg) {
+void configure_joystick(joystick_reader_handle_t joy_reader, EventGroupHandle_t eg) {
     assert(eg != NULL);
     joy_reader->event_group = eg;
 
@@ -104,7 +104,7 @@ void configure_joystick(joystick_reader_handle_t* joy_reader, EventGroupHandle_t
     ESP_LOGI(TAG, "joy is configured");
 }
 
-void read_joystick(joystick_reader_handle_t* joy_reader, int* x, int* y, bool* sw_pressed) {
+void read_joystick(joystick_reader_handle_t joy_reader, int* x, int* y, bool* sw_pressed) {
     ESP_ERROR_CHECK(adc_oneshot_read(joy_reader->adc, joy_reader->chan_x, x));
     ESP_ERROR_CHECK(adc_oneshot_read(joy_reader->adc, joy_reader->chan_y, y));
     *sw_pressed = (gpio_get_level(JOYSTICK_SW_GPIO) == 0);
@@ -155,7 +155,7 @@ void sample_button_long_pressed_cb(void *arg,void *usr_data) {
 }
 
 void joy_event_loop(void* pvParameters) {
-    joystick_reader_handle_t* joy_reader = pvParameters;
+    joystick_reader_handle_t joy_reader = pvParameters;
     int x;
     int y;
     bool sw_pressed;
@@ -189,8 +189,8 @@ void joy_event_loop(void* pvParameters) {
                 joy_reader->y4095_cb(joy_reader);
             }
         }
-        else if (sw_pressed) {
-            joy_reader->events = 0;
+        else if (sw_pressed && (joy_reader->events != JOYSTICK_SW_PRESSED_BIT)) {
+            joy_reader->events = JOYSTICK_SW_PRESSED_BIT;
             if (joy_reader->sw_pressed) {
                 joy_reader->sw_pressed(joy_reader);
             }
@@ -202,7 +202,7 @@ void joy_event_loop(void* pvParameters) {
     }
 }
 
-BaseType_t start_joy_event_loop(joystick_reader_handle_t* joy_reader) {
+BaseType_t start_joy_event_loop(joystick_reader_handle_t joy_reader) {
     return xTaskCreate(joy_event_loop,
                 "LED_MANAGER",
                 2048,

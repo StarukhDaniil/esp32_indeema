@@ -39,19 +39,21 @@ typedef struct {
     void(*y0_cb)(void*);
     void(*y4095_cb)(void*);
     void(*sw_pressed)(void*);
-} joystick_reader_handle_t;
+} joystick_reader_t;
+
+typedef joystick_reader_t* joystick_reader_handle_t;
 
 // setup joy, button and event group
-void configure_joystick(joystick_reader_handle_t* joy_reader, EventGroupHandle_t eg);
+void configure_joystick(joystick_reader_handle_t joy_reader, EventGroupHandle_t eg);
 
 void configure_button_cbs(
-    joystick_reader_handle_t* joy_reader,
+    joystick_reader_handle_t joy_reader,
     void(*single_clk_cb)(void *arg,void *usr_data),
     void(*double_clk_cb)(void *arg,void *usr_data),
     void(*press_cb)(void *arg,void *usr_data),
     void(*long_press_cb)(void *arg,void *usr_data));
 
-void read_joystick(joystick_reader_handle_t* joy_reader, int* x, int* y, bool* sw_pressed);
+void read_joystick(joystick_reader_handle_t joy_reader, int* x, int* y, bool* sw_pressed);
 
 // functions for converting joy position to color and brightness on LED
 uint32_t get_r_from_joy_x(int x);
@@ -64,13 +66,13 @@ void sample_double_clk_cb(void *arg,void *usr_data);
 void sample_button_pressed_cb(void *arg,void *usr_data);
 void sample_button_long_pressed_cb(void *arg,void *usr_data);
 
-void configure_joy_x0_cbs(joystick_reader_handle_t* joy_reader, void(*x0_cb)(void*));
-void configure_joy_x4095_cbs(joystick_reader_handle_t* joy_reader, void(*x4095_cb)(void*));
-void configure_joy_y0_cbs(joystick_reader_handle_t* joy_reader, void(*y0_cb)(void*));
-void configure_joy_y4095_cbs(joystick_reader_handle_t* joy_reader, void(*y4095_cb)(void*));
-void configure_joy_sw_pressed_cbs(joystick_reader_handle_t* joy_reader, void(*sw_pressed_cb)(void*));
+void configure_joy_x0_cbs(joystick_reader_handle_t joy_reader, void(*x0_cb)(void*));
+void configure_joy_x4095_cbs(joystick_reader_handle_t joy_reader, void(*x4095_cb)(void*));
+void configure_joy_y0_cbs(joystick_reader_handle_t joy_reader, void(*y0_cb)(void*));
+void configure_joy_y4095_cbs(joystick_reader_handle_t joy_reader, void(*y4095_cb)(void*));
+void configure_joy_sw_pressed_cbs(joystick_reader_handle_t joy_reader, void(*sw_pressed_cb)(void*));
 
 // creates a task that tracks joystick and throws events
-BaseType_t start_joy_event_loop(joystick_reader_handle_t* joy_reader);
+BaseType_t start_joy_event_loop(joystick_reader_handle_t joy_reader);
 
 #endif

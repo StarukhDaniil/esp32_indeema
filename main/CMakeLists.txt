@@ -7,4 +7,6 @@ idf_component_register(SRCS "main.c"
                         "wifi_manager"
                         "main_helper"
                         "snake_game"
-                        "uart_manager")
+                        "uart_manager"
+                        "i2c_manager"
+                        "wifi_snake_controller")

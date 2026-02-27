@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "snake_game.h"
 #include "esp_random.h"
+#include "led_manager.h"
+
+#include "wifi_snake_controller.h"
 
 #define MATRIX_X_SIZE 8
 #define MATRIX_Y_SIZE 8
@@ -30,7 +33,7 @@
 #define SNAKE_PX_Y(psnake, idx) (SNAKE_PX(psnake, idx)->y)
 
 // convert pixel from (x, y) to a single number for matrix
-#define CONVERT_TO_MATRIX_PX(x, y) (((x) * MATRIX_X_SIZE) + (y))
+#define CONVERT_TO_MATRIX_PX(x, y) (((y) * MATRIX_X_SIZE) + (x))
 
 // access to snake tail x
 #define SNAKE_TAIL_X(psnake) (((pixel_t*)da_get_item(&((psnake)->shape), SNAKE_LENGTH(psnake) - 1))->x)
@@ -59,10 +62,13 @@
 // access to target color
 #define SNAKE_TARGET_COLOR(psnake) (psnake->color_scheme[SNAKE_COLOR_TARGET_IDX])
 
+#define ALL_SNAKE_MOVES_BITS \
+    SNAKE_GO_UP_BIT | SNAKE_GO_RIGHT_BIT | SNAKE_GO_DOWN_BIT | SNAKE_GO_LEFT_BIT | SNAKE_GO_UP_BIT | SNAKE_PAUSE_BIT
+
 static const char TAG[] = "SNAKE_GAME";
 
 // if head head position exceeds border, it appears on the other side
-static void update_head(const snake_handle_t* snake) {
+static void update_head(const snake_handle_t snake) {
     if (snake->curr_dir == SNAKE_GO_UP_BIT) {
         if (SNAKE_HEAD_Y(snake) == 0) {
             SNAKE_HEAD_Y(snake) = MATRIX_Y_SIZE - 1;
@@ -118,7 +124,7 @@ static uint8_t random_dir() {
     return SNAKE_GO_RIGHT_BIT;
 }
 
-static void form_basic_snake(snake_handle_t* snake) {
+static void form_basic_snake(snake_handle_t snake) {
     snake->curr_dir = random_dir();
 
     // using RANDOM_HEAD_X
@@ -133,13 +139,9 @@ static void form_basic_snake(snake_handle_t* snake) {
         da_insert_item(&(snake->shape), SNAKE_PX(snake, SNAKE_HEAD_IDX),  SNAKE_HEAD_IDX);
         update_head(snake);
     }
-
-    for (int i = 0; i < 3; ++i) {
-        printf("%i, %i\n", SNAKE_PX_X(snake, i), SNAKE_PX_Y(snake, i));
-    }
 }
 
-static void update_target(snake_handle_t* snake) {
+static void update_target(snake_handle_t snake) {
     bool collision;
 
     // finding position that is not in snake shape
@@ -157,7 +159,7 @@ static void update_target(snake_handle_t* snake) {
     } while (collision);
 }
 
-void init_snake(snake_handle_t* snake, EventGroupHandle_t eg) {
+void init_snake(snake_handle_t snake, EventGroupHandle_t eg) {
     assert(eg != NULL);
     
     snake->lm.event_group = eg;
@@ -167,7 +169,6 @@ void init_snake(snake_handle_t* snake, EventGroupHandle_t eg) {
     snake->color_scheme[SNAKE_COLOR_HEAD_IDX] = (color_t)SNAKE_DEFAULT_HEAD_COLOR;
     snake->color_scheme[SNAKE_COLOR_BODY_IDX] = (color_t)SNAKE_DEFAULT_BODY_COLOR;
     snake->color_scheme[SNAKE_COLOR_TARGET_IDX] = (color_t)SNAKE_DEFAULT_TARGET_COLOR;
-    snake->pause = false;
 
     led_strip_config_t strip_config = {
         .strip_gpio_num = MATRIX_LED_GPIO,
@@ -194,7 +195,7 @@ void init_snake(snake_handle_t* snake, EventGroupHandle_t eg) {
 }
 
 // if new direction is the same or opposite, do nothing, otherwise, update current direction
-static void update_direction(snake_handle_t* snake, uint8_t new_dir) {
+static void update_direction(snake_handle_t snake, uint8_t new_dir) {
     if (new_dir == 0) {
         return;
     }
@@ -221,7 +222,7 @@ static void update_direction(snake_handle_t* snake, uint8_t new_dir) {
     snake->curr_dir = new_dir;
 }
 
-static void update_snake(snake_handle_t* snake) {
+static void update_snake(snake_handle_t snake) {
     // copying last pixel from snake shape in case snake eats target
     pixel_t tail_copy = {
         .x = SNAKE_TAIL_X(snake),
@@ -252,7 +253,7 @@ static void update_snake(snake_handle_t* snake) {
     }
 }
 
-static void update_picture(const snake_handle_t* snake) {
+static void update_picture(const snake_handle_t snake) {
     led_strip_clear(snake->lm.strip);
 
     // draw snake
@@ -274,28 +275,57 @@ static void update_picture(const snake_handle_t* snake) {
     led_strip_refresh(snake->lm.strip);
 }
 
+static void handle_pause(snake_handle_t snake) {
+    xEventGroupSetBits(snake->lm.event_group, SNAKE_RECEIVED_PAUSE_BIT);
+    uint32_t bits = 0;
+    ESP_LOGI(TAG, "Waiting for resume...");
+    while (!(bits & SNAKE_RESUME_BIT)) {
+        bits = xEventGroupWaitBits(
+            snake->lm.event_group,
+            SNAKE_RESUME_BIT,
+            pdTRUE,
+            pdTRUE,
+            portMAX_DELAY
+        );
+    }
+    ESP_LOGI(TAG, "Resumed!");
+    xEventGroupSetBits(snake->lm.event_group, SNAKE_RECEIVED_RESUME_BIT);
+}
+
 static void event_loop(void* pvParameters) {
-    snake_handle_t* snake = pvParameters;
+    snake_handle_t snake = pvParameters;
     uint32_t bits;
 
     for ( ;; ) {
-        vTaskDelay(pdMS_TO_TICKS(MATRIX_LED_UPDATE_PERIOD));
-        bits = xEventGroupGetBits(snake->lm.event_group);
-        xEventGroupClearBits(snake->lm.event_group, 0x0000ffff);
-        if (bits & SNAKE_PAUSE_BIT) {
-            snake->pause = !snake->pause;
-        }
+        bits = xEventGroupWaitBits(
+            snake->lm.event_group,
+            SNAKE_PAUSE_BIT,
+            pdTRUE,
+            pdTRUE,
+            pdMS_TO_TICKS(MATRIX_UPDATE_PERIOD)
+        );
 
-        if (snake->pause) {
+        if (bits & SNAKE_PAUSE_BIT) {
+            handle_pause(snake);
+            vTaskDelay(pdMS_TO_TICKS(MATRIX_LED_UPDATE_PERIOD));
             continue;
         }
+        
+        bits = xEventGroupGetBits(snake->lm.event_group);
+        xEventGroupClearBits(snake->lm.event_group, 0xffff);
+
+        if (bits & SNAKE_PAUSE_BIT) {            
+            handle_pause(snake);
+            continue;
+        }
+
         update_direction(snake, bits);
         update_snake(snake);
         update_picture(snake);
     }
 }
 
-void snake_start_game(snake_handle_t* snake) {
+void snake_start_game(snake_handle_t snake) {
     xTaskCreate(
         event_loop,
         "SNAKE_TASK",

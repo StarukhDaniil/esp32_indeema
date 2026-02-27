@@ -15,7 +15,7 @@
 
 static const char* TAG = "LED_MANAGER";
 
-void configure_led(led_manager_handle_t* led_manager_handle, EventGroupHandle_t eg) {
+void configure_led(led_manager_handle_t led_manager_handle, EventGroupHandle_t eg) {
     assert(eg != NULL);
     
     led_manager_handle->event_group = eg;
@@ -47,7 +47,7 @@ void configure_led(led_manager_handle_t* led_manager_handle, EventGroupHandle_t 
 
 
 
-void led_add_event(uint32_t bit, void(*cb)(void*), led_manager_handle_t* led_manager_handle) {
+void led_add_event(uint32_t bit, void(*cb)(void*), led_manager_handle_t led_manager_handle) {
     led_manager_handle->cb_bits |= bit;
     bit_cb_pair_t new_bit_cb_pair = {
         .bit = bit,
@@ -56,7 +56,7 @@ void led_add_event(uint32_t bit, void(*cb)(void*), led_manager_handle_t* led_man
     da_push_back(&(led_manager_handle->bit_cbs_arr), &new_bit_cb_pair);
 }
 
-void led_rm_event(uint32_t bit, led_manager_handle_t* led_manager_handle) {
+void led_rm_event(uint32_t bit, led_manager_handle_t led_manager_handle) {
     led_manager_handle->cb_bits &= ~bit;
     for (size_t i = 0; i < led_manager_handle->bit_cbs_arr.curr_size; ++i) {
         if (bit == GET_BIT_FROM_HANDLE_ARR(led_manager_handle, i)) {
@@ -65,7 +65,7 @@ void led_rm_event(uint32_t bit, led_manager_handle_t* led_manager_handle) {
     }
 }
 
-static void handle_led_events(led_manager_handle_t* led_manager_handle) {    
+static void handle_led_events(led_manager_handle_t led_manager_handle) {    
     EventBits_t bits = xEventGroupWaitBits(
         led_manager_handle->event_group,
         led_manager_handle->cb_bits,
@@ -84,13 +84,13 @@ static void handle_led_events(led_manager_handle_t* led_manager_handle) {
 
 static void led_event_loop(void* pvParameters) {
     ESP_LOGI(TAG, "Starting led event loop...");
-    led_manager_handle_t* led_manager_handle = pvParameters;
+    led_manager_handle_t led_manager_handle = pvParameters;
     for ( ;; ) {
         handle_led_events(led_manager_handle);
     }
 }
 
-BaseType_t start_led_event_loop(led_manager_handle_t* led_manager_handle) {
+BaseType_t start_led_event_loop(led_manager_handle_t led_manager_handle) {
     return xTaskCreate(led_event_loop,
         "LED_MANAGER",
         4096,

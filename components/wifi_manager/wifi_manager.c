@@ -14,8 +14,8 @@
 #include "lwip/sys.h"
 #include "esp_sntp.h"
 
-#include "led_manager.h"
 #include "wifi_manager.h"
+#include "led_manager.h"
 
 #define WIFI_EG_DELAY pdMS_TO_TICKS(1)
 #define USER_EG_DELAY pdMS_TO_TICKS(50)
@@ -51,7 +51,7 @@ static void wifi_event_loop(void* pvParameters);
 static void handle_events();
 static void synchronize_time();
 
-void start_nvs_flash(wifi_manager_handle_t* wm) {
+void start_nvs_flash(wifi_manager_handle_t wm) {
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -78,11 +78,10 @@ static void event_handler(void* arg,
     }
 }
 
-void configure_wifi(wifi_manager_handle_t* wm, EventGroupHandle_t wifi_led_eg, EventGroupHandle_t joy_wifi_eg) {
+void configure_wifi(wifi_manager_handle_t wm, EventGroupHandle_t wifi_led_eg, EventGroupHandle_t joy_wifi_eg) {
     wm->wifi_led_eg = wifi_led_eg;
     wm->joy_wifi_eg = joy_wifi_eg;
     da_create_array(&(wm->bit_cbs_arr), sizeof(bit_cb_pair_t));
-    wm->info = WIFI_PAUSED_COTROL_BIT;
     s_wifi_event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -113,7 +112,7 @@ void configure_wifi(wifi_manager_handle_t* wm, EventGroupHandle_t wifi_led_eg, E
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &s_sta_config));
 }
 
-void start_wifi_sta(wifi_manager_handle_t* wm) {
+void start_wifi_sta(wifi_manager_handle_t wm) {
     xTaskCreate(wifi_event_loop,
         "WIFI_Manager",
         4096,
@@ -124,7 +123,7 @@ void start_wifi_sta(wifi_manager_handle_t* wm) {
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-void wm_switch_to_ap(wifi_manager_handle_t* wm) {
+void wm_switch_to_ap(wifi_manager_handle_t wm) {
     wm->info &= ~ WIFI_SNTP_WAS_SET_BIT;
     ESP_ERROR_CHECK(esp_wifi_stop());
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
@@ -134,7 +133,7 @@ void wm_switch_to_ap(wifi_manager_handle_t* wm) {
     xEventGroupSetBits(wm->wifi_led_eg, LED_WIFI_AP_MODE_BIT);
 }
 
-void wm_switch_to_sta(wifi_manager_handle_t* wm) {
+void wm_switch_to_sta(wifi_manager_handle_t wm) {
     ESP_ERROR_CHECK(esp_wifi_stop());
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &s_sta_config));
@@ -143,28 +142,20 @@ void wm_switch_to_sta(wifi_manager_handle_t* wm) {
 }
 
 static void wifi_event_loop(void* pvParameters) {
-    wifi_manager_handle_t* wm = pvParameters;
+    wifi_manager_handle_t wm = pvParameters;
     for ( ;; ) {
         handle_events(wm);
     }
 }
 
 // handles events
-static void handle_events(wifi_manager_handle_t* wm) {
+static void handle_events(wifi_manager_handle_t wm) {
     EventBits_t user_eg_bits = xEventGroupWaitBits(wm->joy_wifi_eg,
         wm->cb_bits,
         pdTRUE,
         pdFALSE,
         USER_EG_DELAY
     );
-
-    if (user_eg_bits & WIFI_PAUSED_COTROL_BIT) {
-        wm->info ^= WIFI_PAUSED_COTROL_BIT;
-    }
-
-    if (wm->info & WIFI_PAUSED_COTROL_BIT) {
-        return;
-    }
     
     if (user_eg_bits) {
         ESP_LOGI(TAG, "caught user eg bits: %i", user_eg_bits);
@@ -209,7 +200,7 @@ static void handle_events(wifi_manager_handle_t* wm) {
     }
 }
 
-static void setup_sntp(wifi_manager_handle_t* wm) {
+static void setup_sntp(wifi_manager_handle_t wm) {
     ESP_LOGI(TAG, "Initializing SNTP...");
     
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -220,7 +211,7 @@ static void setup_sntp(wifi_manager_handle_t* wm) {
     wm->info |= WIFI_SNTP_WAS_SET_BIT;
 }
 
-static void wait_for_timesync(wifi_manager_handle_t* wm) {
+static void wait_for_timesync(wifi_manager_handle_t wm) {
     int retry = 0;
     const int rentry_count = 10;
     while((sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET && retry < rentry_count)
@@ -238,7 +229,7 @@ static void wait_for_timesync(wifi_manager_handle_t* wm) {
     }
 }
 
-static void synchronize_time(wifi_manager_handle_t* wm) {
+static void synchronize_time(wifi_manager_handle_t wm) {
     ESP_LOGI(TAG, "Trying to synchronize time...");
 
     if (!(wm->info & WIFI_SNTP_WAS_SET_BIT)) {
@@ -260,7 +251,7 @@ static void synchronize_time(wifi_manager_handle_t* wm) {
     ESP_LOGI(TAG, "Current time: %s", strtime_buf);
 }
 
-void wm_add_event(uint32_t bit, void(*cb)(void*), wifi_manager_handle_t* wifi_manager_handle) {
+void wm_add_event(uint32_t bit, void(*cb)(void*), wifi_manager_handle_t wifi_manager_handle) {
     wifi_manager_handle->cb_bits |= bit;
     bit_cb_pair_t new_bit_cb_pair = {
         .bit = bit,
@@ -269,7 +260,7 @@ void wm_add_event(uint32_t bit, void(*cb)(void*), wifi_manager_handle_t* wifi_ma
     da_push_back(&(wifi_manager_handle->bit_cbs_arr), &new_bit_cb_pair);
 }
 
-void wm_rm_event(uint32_t bit, wifi_manager_handle_t* wifi_manager_handle) {
+void wm_rm_event(uint32_t bit, wifi_manager_handle_t wifi_manager_handle) {
     wifi_manager_handle->cb_bits &= ~bit;
     for (size_t i = 0; i < wifi_manager_handle->bit_cbs_arr.curr_size; ++i) {
         if (bit == GET_BIT_FROM_HANDLE_ARR(wifi_manager_handle, i)) {
