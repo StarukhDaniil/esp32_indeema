@@ -25,7 +25,7 @@ void init_um(uart_manager_handle_t umh)
         .rx_gpio = DEFAULT_RX_GPIO,
     };
     
-    uart_driver_install(umh->port, umh->rx_buf_size, 0, 0, NULL, 0);
+    uart_driver_install(umh->port, umh->rx_buf_size * 2, 0, 0, NULL, 0);
     uart_param_config(umh->port, &uart_config);
     uart_set_pin(umh->port, umh->tx_gpio, umh->rx_gpio, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 }
@@ -63,6 +63,6 @@ static void rx_task(void *arg)
 }
 
 void start_uart(uart_manager_handle_t umh) {
-    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES - 1, NULL);
-    xTaskCreate(tx_task, "uart_tx_task", 8192, NULL, configMAX_PRIORITIES - 2, NULL);
+    xTaskCreate(rx_task, "uart_rx_task", 8192, umh, configMAX_PRIORITIES - 1, NULL);
+    xTaskCreate(tx_task, "uart_tx_task", 8192, umh, configMAX_PRIORITIES - 2, NULL);
 }
