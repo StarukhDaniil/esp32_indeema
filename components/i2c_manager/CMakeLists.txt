@@ -1,4 +1,4 @@
-idf_component_register(SRCS "sensor_reader.c"
+idf_component_register(SRCS "i2c_manager.c"
                     INCLUDE_DIRS "include"
                     REQUIRES 
                         "driver"

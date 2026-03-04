@@ -1,17 +1,17 @@
-#include "ble_manager.h"
-#include "host/ble_hs.h"
-#include "host/ble_uuid.h"
-#include "services/gap/ble_svc_gap.h"
-#include "services/gatt/ble_svc_gatt.h"
-#include "esp_random.h"
+// #include "ble_manager.h"
+// #include "host/ble_hs.h"
+// #include "host/ble_uuid.h"
+// #include "services/gap/ble_svc_gap.h"
+// #include "services/gatt/ble_svc_gatt.h"
+// #include "esp_random.h"
 
-#define GATT_BAS_UUID 0x180F
-#define GATT_CTS_UUID 0x1805
-#define GATT_DIS_UUID 0x180A
+// #define GATT_BAS_UUID 0x180F
+// #define GATT_CTS_UUID 0x1805
+// #define GATT_DIS_UUID 0x180A
 
-int get_battery_level_cb() {
-    return esp_random() % 100;
-}
+// int get_battery_level_cb() {
+//     return esp_random() % 100;
+// }
 
 // static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
 //     {
@@ -79,6 +79,6 @@ int get_battery_level_cb() {
 //     },
 // };
 
-void blem_start_ble(blem_handle_t* blem) {
+// void blem_start_ble(blem_handle_t* blem) {
 
-}
+// }
