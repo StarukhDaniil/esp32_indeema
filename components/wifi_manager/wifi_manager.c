@@ -20,13 +20,8 @@
 #define WIFI_EG_DELAY pdMS_TO_TICKS(1)
 #define USER_EG_DELAY pdMS_TO_TICKS(50)
 
-static EventGroupHandle_t s_wifi_event_group;
-// static EventGroupHandle_t* s_joy_wifi_eg;
-// static EventGroupHandle_t* s_wifi_led_eg;
-// static esp_netif_t* s_sta_netif = NULL;
-// static esp_netif_t* s_ap_netif = NULL;
-// static esp_event_handler_instance_t instance_any_id;
-// static esp_event_handler_instance_t instance_got_ip;
+// static EventGroupHandle_t s_wifi_event_group;
+
 static wifi_config_t s_ap_config = {
     .ap = {
         .ssid = "Daniil_ESP32_AP",
@@ -65,16 +60,17 @@ static void event_handler(void* arg,
                           esp_event_base_t event_base,
                           int32_t event_id,
                           void* event_data) {
+    wifi_manager_handle_t wm = arg;
     if (event_base == WIFI_EVENT) {
         if (event_id == WIFI_EVENT_STA_START) {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_READY_BIT);
+            xEventGroupSetBits(wm->wifi_event_group, WIFI_READY_BIT);
         }
         else if (event_id == WIFI_EVENT_STA_DISCONNECTED) {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            xEventGroupSetBits(wm->wifi_event_group, WIFI_FAIL_BIT);
         }
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_TO_AP_BIT);
+        xEventGroupSetBits(wm->wifi_event_group, WIFI_CONNECTED_TO_AP_BIT);
     }
 }
 
@@ -82,7 +78,7 @@ void configure_wifi(wifi_manager_handle_t wm, EventGroupHandle_t wifi_led_eg, Ev
     wm->wifi_led_eg = wifi_led_eg;
     wm->joy_wifi_eg = joy_wifi_eg;
     da_create_array(&(wm->bit_cbs_arr), sizeof(bit_cb_pair_t));
-    s_wifi_event_group = xEventGroupCreate();
+    wm->wifi_event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
 
@@ -98,14 +94,14 @@ void configure_wifi(wifi_manager_handle_t wm, EventGroupHandle_t wifi_led_eg, Ev
         WIFI_EVENT,
         ESP_EVENT_ANY_ID,
         &event_handler,
-        NULL,
+        wm,
         &(wm->instance_any_id)));
 
     ESP_ERROR_CHECK(esp_event_handler_instance_register(
         IP_EVENT,
         IP_EVENT_STA_GOT_IP,
         &event_handler,
-        NULL,
+        wm,
         &(wm->instance_got_ip)));
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -167,7 +163,7 @@ static void handle_events(wifi_manager_handle_t wm) {
         }
     }
 
-    EventBits_t wifi_eg_bits = xEventGroupWaitBits(s_wifi_event_group,
+    EventBits_t wifi_eg_bits = xEventGroupWaitBits(wm->wifi_event_group,
         WIFI_CONNECTED_TO_AP_BIT | WIFI_FAIL_BIT | WIFI_READY_BIT | WIFI_SWITCH_TO_STA_BIT | WIFI_SWITCH_TO_AP_BIT,
         pdTRUE,
         pdFALSE,

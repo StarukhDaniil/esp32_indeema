@@ -10,4 +10,5 @@ idf_component_register(SRCS "main.c"
                         "uart_manager"
                         "i2c_manager"
                         "wifi_snake_controller"
-                        "spi_manager")
+                        "spi_manager"
+                        "mqtt_manager")

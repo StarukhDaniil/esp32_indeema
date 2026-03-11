@@ -112,7 +112,7 @@ static esp_err_t first_pause(ws_manager_handle_t wsm) {
         }
         break;
     case WIFI_PAUSED:
-        if (pause_wifi(wsm) == ESP_OK) {
+        if (pause_wifi(wsm) != ESP_OK) {
             return ESP_ERR_TIMEOUT;
         }
         break;
@@ -141,7 +141,7 @@ static void event_loop(void* pvParameters) {
 }
 
 void init_wifi_snake_controller(ws_manager_handle_t wsm, EventGroupHandle_t eg) {
-    wsm->who_paused = WIFI_PAUSED;
+    wsm->who_paused = SNAKE_PAUSED;
     wsm->eg = eg;
 }
 

@@ -3,10 +3,10 @@
 #include "esp_log.h"
 #include "joystick_reader.h"
 
-#define MISO_GPIO 38
-#define MOSI_GPIO 36
-#define CS_GPIO 37
-#define SCL_GPIO 35
+#define MISO_GPIO 2
+#define MOSI_GPIO 42
+#define CS_GPIO 41
+#define SCL_GPIO 40
 
 #define LSM6DS3_ADDR_WHO_AM_I 0x0F
 #define LSM6DS3_ADDR_CTRL1_XL 0x10
@@ -36,9 +36,7 @@ esp_err_t lsm6ds3_read_reg(spi_manager_handle_t sm, uint8_t reg_addr, size_t siz
         .tx_buffer = sm->tx_buf,
         .length = (1 + size) * 8,
     };
-    spi_device_transmit(sm->spi, &trans);
-
-    return ESP_OK;
+    return spi_device_transmit(sm->spi, &trans);
 }
 
 esp_err_t lsm6ds3_write_reg_byte(spi_manager_handle_t sm, uint8_t reg_addr, uint8_t data) {
@@ -80,10 +78,11 @@ esp_err_t lsm6ds3_init_xl(spi_manager_handle_t sm) {
     
     esp_err_t err = lsm6ds3_read_reg(sm, LSM6DS3_ADDR_WHO_AM_I, 1);
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error while transmitting SPI");
         return err;
     }
     vTaskDelay(pdMS_TO_TICKS(100));
-    printf("rx buf[1]: %x", sm->rx_buf[1]);
+    printf("rx buf[1]: %x\n", sm->rx_buf[1]);
     if (sm->rx_buf[1] != LSM6DS3_WHO_AM_I_VALUE) {
         ESP_LOGE(TAG, "LSM6DS3 did not confirm its WHO_AM_I");
         return ESP_ERR_TIMEOUT;
