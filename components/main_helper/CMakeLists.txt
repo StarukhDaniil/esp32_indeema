@@ -1,0 +1,7 @@
+idf_component_register(SRCS "main_helper.c"
+                    INCLUDE_DIRS "include"
+                    REQUIRES
+                        "led_manager"
+                        "wifi_manager"
+                        "joystick_reader"
+                        "wifi_snake_controller")
